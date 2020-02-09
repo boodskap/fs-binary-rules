@@ -14,50 +14,63 @@ public class OutFileProcessor implements Runnable {
 	private final boolean delete_after_processing;
 	
 	protected OutFileProcessor(Properties config) {
-		process_delay = Long.valueOf(config.getProperty("process_delay", "180")) * 1000;
+		process_delay = Long.valueOf(config.getProperty("process_delay", "10")) * 1000;
 		delete_after_processing = Boolean.valueOf(config.getProperty("delete_after_processing", "true"));
 	}
 
 	@Override
 	public void run() {
 		
+		boolean terminated = false;
 		LOG.info("Starting and running...");
 		
-		while(!Thread.currentThread().isInterrupted()) {
+		try {
 			
-			QueuedFile file;
-			
-			try {
-				LOG.info("Waiting for outgoing file...");
-				file = InOutQueue.getOutq().take();
-			} catch (InterruptedException e1) {
-				break;
-			}
-			
-			if(null != file) {
+			while(!Thread.currentThread().isInterrupted()) {
 				
-				long delay = System.currentTimeMillis() - file.getCreatedStamp();
+				QueuedFile file = InOutQueue.getOutq().take();
 				
-				if(delay < process_delay) {
-					
-					delay = (process_delay - delay);
-					
-					LOG.info(String.format("Delaying %d millis before processing file:%s", delay, file.getFile()));
+				if(null != file) {
 					
 					try {
-						Thread.sleep(delay);
-					} catch (InterruptedException e) {
-						break;
+						
+						String oldMd5 = file.computeMD5();
+						
+						LOG.info(String.format("Delaying %d seconds before processing file:%s", process_delay/1000, file.getFile()));
+
+						Thread.sleep(process_delay);
+						
+						String newMd5 = file.computeMD5();
+						
+						if(!oldMd5.equals(newMd5)) {
+							LOG.warn(String.format("File %s is still being uploaded, waiting...", file.getFile()));
+							InOutQueue.getOutq().offer(file);
+							Thread.sleep(process_delay);
+						}else {
+							process(file);
+						}
+						
+					}catch(Exception ex) {
+						LOG.info("Processing failed", ex);
 					}
+					
 				}
 				
-				process(file);
 			}
-						
+			
+		}catch(Exception ex) {
+			if(!(ex instanceof InterruptedException)) {
+				terminated = true;
+				LOG.error("Un-Handled", ex);
+			}
 		}
 		
-		LOG.warn("Stopped.");
-		
+		if(!terminated) {
+			LOG.warn("Stopped.");
+		}else {
+			LOG.error("Terminated.");
+		}
+			
 	}
 
 	private void process(QueuedFile file) {

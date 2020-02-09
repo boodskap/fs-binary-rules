@@ -67,9 +67,9 @@ public final class FileTransfer {
 
 		((AbstractSFTPClient)outClient).setHost(host);
 		((AbstractSFTPClient)outClient).setPort(port);
+		((AbstractSFTPClient)outClient).setRemoteDir(remoteDir);
 		((AbstractSFTPClient)outClient).setUserName(userName);
 		((AbstractSFTPClient)outClient).setPassword(password);
-		((AbstractSFTPClient)outClient).setRemoteDir(remoteDir);
 		
 	}
 	

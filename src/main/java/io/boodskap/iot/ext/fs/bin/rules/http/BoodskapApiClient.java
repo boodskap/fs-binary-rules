@@ -6,9 +6,10 @@ import java.util.Properties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.mashape.unirest.http.JsonNode;
+import com.mashape.unirest.http.Unirest;
+
 import io.boodskap.iot.ext.fs.bin.rules.FileTransferClient;
-import kong.unirest.JsonNode;
-import kong.unirest.Unirest;
 
 public class BoodskapApiClient implements FileTransferClient {
 	

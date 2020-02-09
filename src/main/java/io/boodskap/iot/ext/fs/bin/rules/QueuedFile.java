@@ -1,7 +1,12 @@
 package io.boodskap.iot.ext.fs.bin.rules;
 
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.io.Serializable;
 import java.util.Date;
+
+import org.apache.commons.codec.digest.DigestUtils;
 
 public class QueuedFile implements Serializable{
 
@@ -10,6 +15,7 @@ public class QueuedFile implements Serializable{
 	private final long createdStamp;
 	private final String rule;
 	private final String file;
+	private String md5;
 	
 	public QueuedFile(String rule, String file) {
 		this.createdStamp = System.currentTimeMillis();
@@ -29,12 +35,25 @@ public class QueuedFile implements Serializable{
 		return rule;
 	}
 
+	public String getMd5() {
+		return md5;
+	}
+
+	public void setMd5(String md5) {
+		this.md5 = md5;
+	}
+	
+	public String computeMD5() throws FileNotFoundException, IOException {
+		return this.md5 = DigestUtils.md5Hex(new FileInputStream(file));
+	}
+
 	@Override
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
 		result = prime * result + (int) (createdStamp ^ (createdStamp >>> 32));
 		result = prime * result + ((file == null) ? 0 : file.hashCode());
+		result = prime * result + ((md5 == null) ? 0 : md5.hashCode());
 		result = prime * result + ((rule == null) ? 0 : rule.hashCode());
 		return result;
 	}
@@ -55,6 +74,11 @@ public class QueuedFile implements Serializable{
 				return false;
 		} else if (!file.equals(other.file))
 			return false;
+		if (md5 == null) {
+			if (other.md5 != null)
+				return false;
+		} else if (!md5.equals(other.md5))
+			return false;
 		if (rule == null) {
 			if (other.rule != null)
 				return false;
@@ -65,7 +89,7 @@ public class QueuedFile implements Serializable{
 
 	@Override
 	public String toString() {
-		return "QueuedFile [createdStamp=" + new Date(createdStamp) + ", rule=" + rule + ", file=" + file + "]";
+		return "QueuedFile [createdStamp=" + new Date(createdStamp) + ", rule=" + rule + ", file=" + file + ", md5=" + md5 + "]";
 	}
 
 }
