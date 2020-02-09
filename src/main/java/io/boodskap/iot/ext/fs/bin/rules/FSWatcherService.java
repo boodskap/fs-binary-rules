@@ -66,6 +66,21 @@ public class FSWatcherService implements Runnable {
 				registerDirectory(dir);
 				return FileVisitResult.CONTINUE;
 			}
+
+			@Override
+			public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+				
+				final File bfile = file.toFile();
+				final String inout = bfile.getParentFile().getParentFile().getName();
+				final String rule = bfile.getParentFile().getName();
+				
+				LOG.debug(String.format("Existing file type:%s rule:%s file:%s", inout, rule, file));
+				
+				handler.handle(inout, rule, file);
+				
+				return FileVisitResult.CONTINUE;
+			}
+			
 		});
 	}
 

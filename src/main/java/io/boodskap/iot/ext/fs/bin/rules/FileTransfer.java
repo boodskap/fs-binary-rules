@@ -16,7 +16,7 @@ public final class FileTransfer {
 	private static final Logger LOG = LoggerFactory.getLogger(Main.class);
 
 	private static FileTransferClient outClient;
-	private static FileTransferClient inClient;
+	private static BoodskapApiClient inClient;
 	
 	private FileTransfer() {
 		
@@ -77,7 +77,7 @@ public final class FileTransfer {
 		return outClient;
 	}
 	
-	public static final FileTransferClient getInClient() {
+	public static final BoodskapApiClient getInClient() {
 		return inClient;
 	}
 }

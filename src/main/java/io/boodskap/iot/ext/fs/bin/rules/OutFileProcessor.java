@@ -1,8 +1,11 @@
 package io.boodskap.iot.ext.fs.bin.rules;
 
 import java.io.File;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
 
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -73,7 +76,10 @@ public class OutFileProcessor implements Runnable {
 			
 	}
 
-	private void process(QueuedFile file) {
+	private void process(QueuedFile file) throws Exception {
+		
+		Map<String, Object> map = new HashMap<>();
+		map.put("file", new File(file.getFile()).getName());
 		
 		try {
 			
@@ -81,8 +87,13 @@ public class OutFileProcessor implements Runnable {
 			
 			LOG.info(String.format("Processing file:%s", file.getFile()));
 			
+			map.put("status", "uploading");
+			FileTransfer.getInClient().status(file.getRule(), map);
+			
 			FileTransfer.getOutClient().put(file.getRule(), osFile);
 
+			map.put("status", "finished");
+			
 			if(delete_after_processing) {
 				
 				osFile.delete();
@@ -95,7 +106,11 @@ public class OutFileProcessor implements Runnable {
 			}
 			
 		}catch(Exception ex) {
+			map.put("status", "failed");
+			map.put("error", ExceptionUtils.getRootCauseMessage(ex));
 			LOG.error("Processing Failed", ex);
+		}finally {
+			FileTransfer.getInClient().status(file.getRule(), map);
 		}
 		
 	}
