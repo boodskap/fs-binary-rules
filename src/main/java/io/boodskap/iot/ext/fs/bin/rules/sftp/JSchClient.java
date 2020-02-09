@@ -31,20 +31,24 @@ public class JSchClient extends AbstractSFTPClient{
 
 	    JSch jsch = new JSch();
 	    
-	    if(Boolean.valueOf(props.getProperty("jsch.keyfile_auth", "fase"))) {
-	    	String prvkey = props.getProperty("jsch.prvkey");
-	    	String pubkey = props.getProperty("jsch.pubkey");
-	    	String passphrase = props.getProperty("jsch.passphrase");
-		    jsch.addIdentity(prvkey, pubkey, null != passphrase ? passphrase.getBytes() : null);
-	    }
-	    
 	    String defKnownHosts = System.getProperty("user.home") + "/.ssh/known_hosts";
 	    String knownHosts = props.getProperty("jsch.known_hosts", defKnownHosts);
 	    
 	    jsch.setKnownHosts(knownHosts);
 	    
-	    session = jsch.getSession(getUserName(), getHost(), getPort());
-	    session.setPassword(getPassword());
+	    if(Boolean.valueOf(props.getProperty("jsch.keyfile_auth", "false"))) {
+	    	String prvkey = props.getProperty("jsch.prvkey");
+	    	String pubkey = props.getProperty("jsch.pubkey");
+	    	String passphrase = props.getProperty("jsch.passphrase");
+		    jsch.addIdentity(prvkey, pubkey, null != passphrase ? passphrase.getBytes() : "".getBytes());
+	    }
+	    
+    	session = jsch.getSession(getUserName(), getHost(), getPort());
+    	
+    	if(!Boolean.valueOf(props.getProperty("jsch.keyfile_auth", "false"))) {
+    		session.setPassword(getPassword());
+    	}
+    	
 	    session.connect();
 	    
 	    channel = (ChannelSftp) session.openChannel("sftp");
