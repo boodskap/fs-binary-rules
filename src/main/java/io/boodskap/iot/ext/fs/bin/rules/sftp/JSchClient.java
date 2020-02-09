@@ -14,11 +14,13 @@ public class JSchClient extends AbstractSFTPClient{
 	
 	private static final Logger LOG = LoggerFactory.getLogger(JSchClient.class);
 	
+	private final Properties config;
 	private final Properties props;
 	private Session session;
 	private ChannelSftp channel;
 	
-	public JSchClient(Properties props) {
+	public JSchClient(Properties config, Properties props) {
+		this.config = config;
 		this.props = props;
 	}
 	
@@ -32,20 +34,20 @@ public class JSchClient extends AbstractSFTPClient{
 	    JSch jsch = new JSch();
 	    
 	    String defKnownHosts = System.getProperty("user.home") + "/.ssh/known_hosts";
-	    String knownHosts = props.getProperty("jsch.known_hosts", defKnownHosts);
+	    String knownHosts = config.getProperty("jsch.known_hosts", defKnownHosts);
 	    
 	    jsch.setKnownHosts(knownHosts);
 	    
-	    if(Boolean.valueOf(props.getProperty("jsch.keyfile_auth", "false"))) {
-	    	String prvkey = props.getProperty("jsch.prvkey");
-	    	String pubkey = props.getProperty("jsch.pubkey");
-	    	String passphrase = props.getProperty("jsch.passphrase");
+	    if(Boolean.valueOf(config.getProperty("jsch.keyfile_auth", "false"))) {
+	    	String prvkey = config.getProperty("jsch.prvkey");
+	    	String pubkey = config.getProperty("jsch.pubkey");
+	    	String passphrase = config.getProperty("jsch.passphrase");
 		    jsch.addIdentity(prvkey, pubkey, null != passphrase ? passphrase.getBytes() : "".getBytes());
 	    }
 	    
     	session = jsch.getSession(getUserName(), getHost(), getPort());
     	
-    	if(!Boolean.valueOf(props.getProperty("jsch.keyfile_auth", "false"))) {
+    	if(!Boolean.valueOf(config.getProperty("jsch.keyfile_auth", "false"))) {
     		session.setPassword(getPassword());
     	}
     	

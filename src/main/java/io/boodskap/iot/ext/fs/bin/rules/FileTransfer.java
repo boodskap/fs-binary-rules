@@ -58,7 +58,7 @@ public final class FileTransfer {
 			} else {
 				props.load(new FileReader(implCfgFile));
 			}
-			outClient = new JSchClient(props);
+			outClient = new JSchClient(config, props);
 			break;
 		default:
 			throw new Exception("Unknown SFTP implementation:" + impl);
