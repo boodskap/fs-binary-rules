@@ -7,6 +7,7 @@ import java.util.Properties;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import org.apache.log4j.PropertyConfigurator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.wso2.msf4j.MicroservicesRunner;
@@ -14,6 +15,17 @@ import org.wso2.msf4j.MicroservicesRunner;
 import io.boodskap.iot.ext.fs.bin.rules.api.FileUploadService;
 
 public class Main implements FSWatcherService.Handler {
+
+	private static File home = new File(System.getProperty("user.home", "/etc/fsbinrules"));
+	private static File cfgFolder = new File(home, "config");
+	private static File cfgFile = new File(cfgFolder, "fsbinrules.properties");
+	
+	static {
+		File log4j = new File(cfgFolder, "log4j.properties");
+		if(log4j.exists()) {
+			PropertyConfigurator.configure(log4j.getAbsolutePath());
+		}
+	}
 
 	private static final Logger LOG = LoggerFactory.getLogger(Main.class);
 	private static ExecutorService exec = Executors.newCachedThreadPool();
@@ -36,10 +48,6 @@ public class Main implements FSWatcherService.Handler {
 		try {
 
 			final Properties config = new Properties();
-
-			File home = new File(System.getProperty("user.home", "/etc/fsbinrules"));
-			File cfgFolder = new File(home, "config");
-			File cfgFile = new File(cfgFolder, "fsbinrules.properties");
 
 			if (!cfgFile.exists()) {
 				LOG.error(String.format("Config file:%s does not exists, using defaults", cfgFile.getAbsolutePath()));
