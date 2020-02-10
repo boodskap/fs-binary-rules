@@ -23,6 +23,7 @@ public class Main implements FSWatcherService.Handler {
 	static {
 		File log4j = new File(cfgFolder, "log4j.properties");
 		if(log4j.exists()) {
+			System.err.format("Log4j:%s\n", log4j.getAbsolutePath());
 			PropertyConfigurator.configure(log4j.getAbsolutePath());
 		}
 	}

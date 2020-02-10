@@ -3,6 +3,7 @@ package io.boodskap.iot.ext.fs.bin.rules.api;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.List;
@@ -43,6 +44,19 @@ public class FileUploadService {
     @Path("/files")
     @Consumes(MediaType.MULTIPART_FORM_DATA)
     public Response multipleFiles(@FormDataParam("outdir") String outDir, @FormDataParam("files") List<File> files) {
+    	
+    	if(null == outDir) {
+    		return Response.status(Response.Status.BAD_REQUEST).entity("outdir is expected").build();
+    	}
+    	
+    	if(null == files) {
+    		return Response.status(Response.Status.BAD_REQUEST).entity("files is expected").build();
+    	}
+    	
+    	if(files.isEmpty()) {
+    		return Response.status(Response.Status.BAD_REQUEST).entity("at least one file is expected").build();
+    	}
+    	
         StringBuilder response = new StringBuilder();
         files.forEach(file -> {
             try {
@@ -50,27 +64,45 @@ public class FileUploadService {
             	LOG.info(String.format("Uploding %s/%s", outPath, file.getName()));
             	new File(outPath).mkdirs();
                 Files.copy(file.toPath(), Paths.get(outPath, file.getName()));
+            } catch (FileAlreadyExistsException fex) {
+        		response.append(String.format("File %s already exists", file.getName()));
             } catch (IOException e) {
                 response.append("Unable to upload the file ").append(e.getMessage());
                 LOG.error("Error while Copying the file " + e.getMessage(), e);
             }
         });
+        
         if (!response.toString().isEmpty()) {
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(response.toString()).build();
+            return Response.status(Response.Status.BAD_REQUEST).entity(response.toString()).build();
         }
+        
         return Response.ok().entity("Request completed").build();
     }
 
     @POST
     @Path("/stream")
     @Consumes(MediaType.MULTIPART_FORM_DATA)
-    public Response multipleFiles(@FormDataParam("outdir") String outDir, @FormDataParam("file") FileInfo fileInfo,
-                                  @FormDataParam("file") InputStream inputStream) {
+    public Response multipleFiles(@FormDataParam("outdir") String outDir, @FormDataParam("file") FileInfo info, @FormDataParam("file") InputStream inputStream) {
+    	
+    	if(null == outDir) {
+    		return Response.status(Response.Status.BAD_REQUEST).entity("outdir is expected").build();
+    	}
+    	
+    	if(null == info) {
+    		return Response.status(Response.Status.BAD_REQUEST).entity("filename is expected").build();
+    	}
+    	
+    	if(null == inputStream) {
+    		return Response.status(Response.Status.BAD_REQUEST).entity("file is expected").build();
+    	}
+    	
         try {
         	final String outPath = String.format("%s/%s", this.outDir, outDir);
-        	LOG.info(String.format("Uploding %s/%s", outPath, fileInfo.getFileName()));
+        	LOG.info(String.format("Uploding %s/%s", outPath, info.getFileName()));
         	new File(outPath).mkdirs();
-            Files.copy(inputStream, Paths.get(outPath, fileInfo.getFileName()));
+            Files.copy(inputStream, Paths.get(outPath, info.getFileName()));
+        } catch (FileAlreadyExistsException fex) {
+    		return Response.status(Response.Status.BAD_REQUEST).entity("file already exists").build();
         } catch (IOException e) {
             LOG.error("Error while Copying the file " + e.getMessage(), e);
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
