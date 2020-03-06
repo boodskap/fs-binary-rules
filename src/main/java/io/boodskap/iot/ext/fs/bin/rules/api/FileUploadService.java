@@ -84,32 +84,41 @@ public class FileUploadService {
     @Consumes(MediaType.MULTIPART_FORM_DATA)
     public Response multipleFiles(@FormDataParam("outdir") String outDir, @FormDataParam("file") FileInfo info, @FormDataParam("file") InputStream inputStream) {
     	
-    	if(null == outDir) {
-    		return Response.status(Response.Status.BAD_REQUEST).entity("outdir is expected").build();
+    	try {
+    		
+        	if(null == outDir) {
+        		return Response.status(Response.Status.BAD_REQUEST).entity("outdir is expected").build();
+        	}
+        	
+        	if(null == info) {
+        		return Response.status(Response.Status.BAD_REQUEST).entity("filename is expected").build();
+        	}
+        	
+        	if(null == inputStream) {
+        		return Response.status(Response.Status.BAD_REQUEST).entity("file is expected").build();
+        	}
+        	
+            try {
+            	final String outPath = String.format("%s/%s", this.outDir, outDir);
+            	LOG.info(String.format("Uploding %s/%s", outPath, info.getFileName()));
+            	new File(outPath).mkdirs();
+                Files.copy(inputStream, Paths.get(outPath, info.getFileName()));
+            } catch (FileAlreadyExistsException fex) {
+        		return Response.status(Response.Status.BAD_REQUEST).entity("file already exists").build();
+            } catch (IOException e) {
+                LOG.error("Error while Copying the file " + e.getMessage(), e);
+                return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
+            } finally {
+                IOUtils.closeQuietly(inputStream);
+            }
+            
+            return Response.ok().entity("Request completed").build();
+            
+    	}catch(Exception ex) {
+    		ex.printStackTrace();
+    		return Response.status(500).entity(ex).build();
     	}
     	
-    	if(null == info) {
-    		return Response.status(Response.Status.BAD_REQUEST).entity("filename is expected").build();
-    	}
-    	
-    	if(null == inputStream) {
-    		return Response.status(Response.Status.BAD_REQUEST).entity("file is expected").build();
-    	}
-    	
-        try {
-        	final String outPath = String.format("%s/%s", this.outDir, outDir);
-        	LOG.info(String.format("Uploding %s/%s", outPath, info.getFileName()));
-        	new File(outPath).mkdirs();
-            Files.copy(inputStream, Paths.get(outPath, info.getFileName()));
-        } catch (FileAlreadyExistsException fex) {
-    		return Response.status(Response.Status.BAD_REQUEST).entity("file already exists").build();
-        } catch (IOException e) {
-            LOG.error("Error while Copying the file " + e.getMessage(), e);
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
-        } finally {
-            IOUtils.closeQuietly(inputStream);
-        }
-        return Response.ok().entity("Request completed").build();
     }
     
 }
