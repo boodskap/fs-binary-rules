@@ -15,8 +15,15 @@ import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.eclipse.jetty.http.HttpVersion;
+import org.eclipse.jetty.server.HttpConfiguration;
+import org.eclipse.jetty.server.HttpConnectionFactory;
+import org.eclipse.jetty.server.SecureRequestCustomizer;
 import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.server.ServerConnector;
+import org.eclipse.jetty.server.SslConnectionFactory;
 import org.eclipse.jetty.servlet.ServletHandler;
+import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,9 +50,33 @@ public class FileUploadService implements Runnable {
     		}
     	}
     	
-    	
+		server = new Server();
 		
-		server = new Server(port);
+		if(Boolean.valueOf(config.getProperty("ssl_enabled", "false"))) {
+			
+			final String keyStorePath = config.getProperty("ssl_keystore");
+			
+			LOG.info(String.format("Configuring SSL using store %s", keyStorePath));
+			
+	    	final SslContextFactory sslContextFactory = new SslContextFactory(keyStorePath);
+	    	sslContextFactory.setKeyStorePassword(config.getProperty("keystore_password"));
+	    	final HttpConfiguration httpsConfiguration = new HttpConfiguration();
+	    	httpsConfiguration.addCustomizer(new SecureRequestCustomizer());
+	    	final ServerConnector https = new ServerConnector(server,
+	    	    new SslConnectionFactory(sslContextFactory, HttpVersion.HTTP_1_1.asString()),
+	    	    new HttpConnectionFactory(httpsConfiguration));
+	    	https.setPort(port);
+	    	server.addConnector(https);    	
+			
+		}else {
+			
+			LOG.info("SSL not enbled, using plain HTTP");
+			
+	    	final ServerConnector http = new ServerConnector(server, new HttpConnectionFactory());
+	    	http.setPort(port);
+	    	server.addConnector(http);
+	    	
+		}
         
         ServletHandler handler = new ServletHandler();
         
