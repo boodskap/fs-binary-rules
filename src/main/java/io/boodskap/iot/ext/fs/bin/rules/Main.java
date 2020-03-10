@@ -10,7 +10,6 @@ import java.util.concurrent.Executors;
 import org.apache.log4j.PropertyConfigurator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.wso2.msf4j.MicroservicesRunner;
 
 import io.boodskap.iot.ext.fs.bin.rules.api.FileUploadService;
 
@@ -30,7 +29,7 @@ public class Main implements FSWatcherService.Handler {
 
 	private static final Logger LOG = LoggerFactory.getLogger(Main.class);
 	private static ExecutorService exec = Executors.newCachedThreadPool();
-	private static MicroservicesRunner microServices;
+	private static FileUploadService microServices;
 	
 	static {
 		Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
@@ -78,10 +77,8 @@ public class Main implements FSWatcherService.Handler {
 			exec.submit(new FSWatcherService(root.toPath(), new Main()));
 			exec.submit(new InFileProcessor(config));
 			exec.submit(new OutFileProcessor(config));
-			
-			microServices = new MicroservicesRunner(Integer.valueOf(config.getProperty("micro_service_port", "19091")));
-			microServices.deploy(new FileUploadService(config));
-			microServices.start();
+			exec.submit(new FileUploadService(config));
+
 
 		} catch (Exception ex) {
 			LOG.error("Init failed", ex);

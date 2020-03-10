@@ -2,123 +2,123 @@ package io.boodskap.iot.ext.fs.bin.rules.api;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.FileAlreadyExistsException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.util.List;
+import java.util.EnumSet;
 import java.util.Properties;
 
-import javax.ws.rs.Consumes;
-import javax.ws.rs.POST;
-import javax.ws.rs.Path;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
+import javax.servlet.DispatcherType;
+import javax.servlet.Filter;
+import javax.servlet.FilterChain;
+import javax.servlet.FilterConfig;
+import javax.servlet.ServletException;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
-import org.apache.commons.io.IOUtils;
+import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.servlet.ServletHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.wso2.msf4j.formparam.FileInfo;
-import org.wso2.msf4j.formparam.FormDataParam;
 
-
-@Path("/upload")
-public class FileUploadService {
+public class FileUploadService implements Runnable {
 
     private static final Logger LOG = LoggerFactory.getLogger(FileUploadService.class);
-    
-    private final String outDir;
-    
-    public FileUploadService(final Properties config) {
-    	this.outDir = String.format("%s/out", config.getProperty("root_dir"));
+
+	private Server server;
+
+	public FileUploadService(final Properties config) throws Exception {
+		
+		int port = Integer.valueOf(config.getProperty("micro_service_port", "19091"));
+    	Config.get().setUploadDirectory(String.format("%s/out", config.getProperty("root_dir")));
+    	Config.get().setMemoryThreshold(Integer.valueOf(config.getProperty("out_mem_threshold", String.valueOf(1024 * 1024 * 10)))); //10MB
+    	Config.get().setMaxFileSize(Integer.valueOf(config.getProperty("out_max_file_size", String.valueOf(1024 * 1024 * 40)))); //40MB
+    	Config.get().setMaxRequestSize(Integer.valueOf(config.getProperty("out_max_req_size", String.valueOf(1024 * 1024 * 50)))); //50MB
+    	
+    	
     	String outDirs = config.getProperty("out_folders", "");
     	String[] outFolders = outDirs.split(",");
     	for(String outFolder : outFolders) {
     		if(!outFolder.trim().equals("")) {
-    			new File(String.format("%s/%s", outDir, outFolder)).mkdirs();
+    			new File(String.format("%s/%s", Config.get().getUploadDirectory(), outFolder)).mkdirs();
     		}
     	}
-    }
-
-    @POST
-    @Path("/files")
-    @Consumes(MediaType.MULTIPART_FORM_DATA)
-    public Response multipleFiles(@FormDataParam("outdir") String outDir, @FormDataParam("files") List<File> files) {
     	
-    	if(null == outDir) {
-    		return Response.status(Response.Status.BAD_REQUEST).entity("outdir is expected").build();
-    	}
     	
-    	if(null == files) {
-    		return Response.status(Response.Status.BAD_REQUEST).entity("files is expected").build();
-    	}
-    	
-    	if(files.isEmpty()) {
-    		return Response.status(Response.Status.BAD_REQUEST).entity("at least one file is expected").build();
-    	}
-    	
-        StringBuilder response = new StringBuilder();
-        files.forEach(file -> {
-            try {
-            	final String outPath = String.format("%s/%s", this.outDir, outDir);
-            	LOG.info(String.format("Uploding %s/%s", outPath, file.getName()));
-            	new File(outPath).mkdirs();
-                Files.copy(file.toPath(), Paths.get(outPath, file.getName()));
-            } catch (FileAlreadyExistsException fex) {
-        		response.append(String.format("File %s already exists", file.getName()));
-            } catch (IOException e) {
-                response.append("Unable to upload the file ").append(e.getMessage());
-                LOG.error("Error while Copying the file " + e.getMessage(), e);
-            }
-        });
+		
+		server = new Server(port);
         
-        if (!response.toString().isEmpty()) {
-            return Response.status(Response.Status.BAD_REQUEST).entity(response.toString()).build();
-        }
+        ServletHandler handler = new ServletHandler();
         
-        return Response.ok().entity("Request completed").build();
-    }
+        handler.addFilterWithMapping(FilterTraceTrack.class, "/*", EnumSet.of(DispatcherType.REQUEST));
+        
+        server.setHandler(handler);
+        server.setDumpAfterStart(false);
+        server.setDumpBeforeStop(false);
+        
+        
+        handler.addServletWithMapping(FileUploadServlet.class, "/upload/*");
+        
+        LOG.info(String.format("Listening at 0.0.0.0:%d", port));
 
-    @POST
-    @Path("/stream")
-    @Consumes(MediaType.MULTIPART_FORM_DATA)
-    public Response multipleFiles(@FormDataParam("outdir") String outDir, @FormDataParam("file") FileInfo info, @FormDataParam("file") InputStream inputStream) {
-    	
-    	try {
-    		
-        	if(null == outDir) {
-        		return Response.status(Response.Status.BAD_REQUEST).entity("outdir is expected").build();
-        	}
-        	
-        	if(null == info) {
-        		return Response.status(Response.Status.BAD_REQUEST).entity("filename is expected").build();
-        	}
-        	
-        	if(null == inputStream) {
-        		return Response.status(Response.Status.BAD_REQUEST).entity("file is expected").build();
-        	}
-        	
-            try {
-            	final String outPath = String.format("%s/%s", this.outDir, outDir);
-            	LOG.info(String.format("Uploding %s/%s", outPath, info.getFileName()));
-            	new File(outPath).mkdirs();
-                Files.copy(inputStream, Paths.get(outPath, info.getFileName()));
-            } catch (FileAlreadyExistsException fex) {
-        		return Response.status(Response.Status.BAD_REQUEST).entity("file already exists").build();
-            } catch (IOException e) {
-                LOG.error("Error while Copying the file " + e.getMessage(), e);
-                return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
-            } finally {
-                IOUtils.closeQuietly(inputStream);
-            }
-            
-            return Response.ok().entity("Request completed").build();
-            
-    	}catch(Exception ex) {
-    		ex.printStackTrace();
-    		return Response.status(500).entity(ex).build();
-    	}
-    	
-    }
-    
+	}
+
+	@Override
+	public void run() {
+		
+		try {
+			
+			server.start();
+			
+			LOG.info("Started and running...");
+			
+	        server.join();
+			
+			LOG.info("stopped.");
+			
+		}catch(Exception ex) {
+			LOG.error("Service terminated", ex);
+		}
+		
+	}
+
+	public void stop() {
+		try {
+			server.stop();
+		} catch (Exception e) {
+			LOG.error("Error while stopping", e);
+		}
+	}
+	
+	public static class FilterTraceTrack implements Filter{
+
+		@Override
+		public void init(FilterConfig filterConfig) throws ServletException {
+		}
+
+		@Override
+		public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
+			
+			HttpServletRequest req = (HttpServletRequest) request;
+			HttpServletResponse res = (HttpServletResponse) response;
+			final String method = req.getMethod().toUpperCase();
+			
+			switch(method) {
+			case "TRACE":
+			case "TRACK":
+				LOG.warn(String.format("Rejecting %s method from:%s", method, request.getRemoteAddr()));
+	            res.setStatus(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
+	            res.flushBuffer();
+	            break;
+			default:
+				chain.doFilter(request, response);
+				break;
+			}
+		}
+
+		@Override
+		public void destroy() {
+		}
+		
+	}
+
 }
