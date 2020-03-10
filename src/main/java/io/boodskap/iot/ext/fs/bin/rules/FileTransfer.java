@@ -27,14 +27,17 @@ public final class FileTransfer {
 		final File home = new File(System.getProperty("user.home", "/etc/fsbinrules"));
 		final File cfgFolder = new File(home, "config");
 		
-		switch(config.getProperty("out.protocol")) {
-		case "sftp":
-			initSFTP(config, cfgFolder);
-			break;
-		default:
-			throw new Exception("Unimplemented protocol:" + config.getProperty("out.protocol"));
+		if(Boolean.valueOf(config.getProperty("out.enabled", "true"))) {
+			switch(config.getProperty("out.protocol")) {
+			case "sftp":
+				initSFTP(config, cfgFolder);
+				break;
+			default:
+				throw new Exception("Unimplemented protocol:" + config.getProperty("out.protocol"));
+			}
+			
 		}
-		
+
 		inClient = new BoodskapApiClient(config);
 		
 	}

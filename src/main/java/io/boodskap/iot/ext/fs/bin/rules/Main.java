@@ -70,12 +70,13 @@ public class Main implements FSWatcherService.Handler {
 				out.mkdirs();
 			}
 			
+			FileTransfer.init(config);
+
 			exec.submit(new FSWatcherService(root.toPath(), new Main()));
 			exec.submit(new InFileProcessor(config));
 			exec.submit(new FileUploadService(config));
 
 			if(Boolean.valueOf(config.getProperty("out.enabled", "true"))) {
-				FileTransfer.init(config);
 				exec.submit(new OutFileProcessor(config));
 			}
 			
