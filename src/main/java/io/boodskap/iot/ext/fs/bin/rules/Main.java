@@ -25,6 +25,9 @@ public class Main implements FSWatcherService.Handler {
 			System.err.format("Log4j:%s\n", log4j.getAbsolutePath());
 			PropertyConfigurator.configure(log4j.getAbsolutePath());
 		}
+		System.out.println("----------------------");
+		System.getProperties().list(System.out);
+		System.out.println("----------------------");
 	}
 
 	private static final Logger LOG = LoggerFactory.getLogger(Main.class);
