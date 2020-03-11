@@ -7,7 +7,7 @@ import java.util.Properties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.boodskap.iot.ext.fs.bin.rules.http.BoodskapApiClient;
+import io.boodskap.iot.ext.fs.bin.rules.http.UnirestApiClient;
 import io.boodskap.iot.ext.fs.bin.rules.sftp.AbstractSFTPClient;
 import io.boodskap.iot.ext.fs.bin.rules.sftp.JSchClient;
 
@@ -16,7 +16,7 @@ public final class FileTransfer {
 	private static final Logger LOG = LoggerFactory.getLogger(Main.class);
 
 	private static FileTransferClient outClient;
-	private static BoodskapApiClient inClient;
+	private static ApiClient inClient;
 	
 	private FileTransfer() {
 		
@@ -37,8 +37,17 @@ public final class FileTransfer {
 			}
 			
 		}
+		
+		switch(config.getProperty("", "unirest")) {
+		case "unirest":
+			inClient = new UnirestApiClient(config);
+			break;
+		case "http":
+			break;
+		default:
+			throw new Exception("Unknown api client:" + config.getProperty("api.client"));
+		}
 
-		inClient = new BoodskapApiClient(config);
 		
 	}
 
@@ -80,7 +89,7 @@ public final class FileTransfer {
 		return outClient;
 	}
 	
-	public static final BoodskapApiClient getInClient() {
+	public static final ApiClient getInClient() {
 		return inClient;
 	}
 }

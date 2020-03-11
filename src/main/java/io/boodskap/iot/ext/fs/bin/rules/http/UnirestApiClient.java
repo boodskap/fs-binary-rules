@@ -11,16 +11,19 @@ import org.slf4j.LoggerFactory;
 import com.mashape.unirest.http.JsonNode;
 import com.mashape.unirest.http.Unirest;
 
-public class BoodskapApiClient{
+import io.boodskap.iot.ext.fs.bin.rules.ApiClient;
+
+public class UnirestApiClient implements ApiClient{
 	
-	private static final Logger LOG = LoggerFactory.getLogger(BoodskapApiClient.class);
+	private static final Logger LOG = LoggerFactory.getLogger(UnirestApiClient.class);
 	
 	private Properties config;
 	
-	public BoodskapApiClient(Properties config) {
+	public UnirestApiClient(Properties config) {
 		this.config = config;
 	}
 
+	@Override
 	public void put(String rule, File localFile) throws Exception {
 		
 		LOG.info(String.format("Uploading binary rule:%s file:%s", rule, localFile));
@@ -44,6 +47,7 @@ public class BoodskapApiClient{
 	}
 
 
+	@Override
 	public void status(String rule, Map<String, Object> map) throws Exception {
 		
 		LOG.info(String.format("Sending webhook status rule:%s-webhook data:%s", rule, map));
